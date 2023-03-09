@@ -33,7 +33,12 @@ int name_colors8_timeset;
 int name_colors8_status;
 void name_colors8(int color1[], int color2[], int color3[], int color4[], int color5[], int color6[], int color7[], int color8[], unsigned long time1, unsigned long time2, unsigned long time3, unsigned long time4, unsigned long time5, unsigned long time6, unsigned long time7, unsigned long time8) {
 
- 
+unsigned long name_lightoffbycenter_timmer;   
+int name_lightoffbycenter_timeset;
+int name_lightoffbycenter_status;
+int name_lightoffbycenter_loopcount;
+void name_lightoffbycenter(int T1color[], int H1color[], int E1color[], int O2color[], int N2color[], int E2color[], int M3color[], int A3color[], int N3color[], int B4color[], int I4color[], int G4color[], int B5color[], int A5color[], int N5color[], int D5color[], int T6color[],int H6color[],int E6color[], int O6color[], int R6color[], int Y6color[], unsigned long steptime){
+
 int name_fadesiren_status;
 int name_fadesiren_timeset;
 unsigned long name_fadesiren_timmer1;
