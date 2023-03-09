@@ -11,19 +11,19 @@ CRGB leds[NUM_LEDS];
 
 // Adafruit_PWMServoDriver pwm1 = Adafruit_PWMServoDriver(0x40);
 // LED on pin 13
-const int top_led_pin_R = 9;
-const int top_led_pin_G = 11;
-const int top_led_pin_B = 10;
+const int top_led_pin_R = 5;
+const int top_led_pin_G = 6;
+const int top_led_pin_B = 7;
 
 const int bot_led_pin_R = 2;
 const int bot_led_pin_G = 3;
 const int bot_led_pin_B = 4;
 
 
-/*const int disco_led_pin_R = 9;
-const int disco_led_pin_G = 11;
+const int disco_led_pin_R = 8;
+const int disco_led_pin_G = 9;
 const int disco_led_pin_B = 10;
-*/
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 //                                        piezo                                     //
@@ -950,7 +950,7 @@ void bot_fadesiren(int startcolor[], int endcolor[], unsigned long finaltime) {
      }     
   }  
 }
-/*
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////                                                        fonctions sorties pwm ( program et efect ) disco                                            /////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1363,7 +1363,7 @@ void disco_fadesiren(int startcolor[], int endcolor[], unsigned long finaltime) 
      }     
   }  
 }
-*/
+
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////                                                        fonctions sorties pwm ( program et efect ) name                                            /////////////////
@@ -1644,7 +1644,128 @@ void name_colors8(int color1[], int color2[], int color3[], int color4[], int co
   }
 }
 
-  
+unsigned long name_lightoffbycenter_timmer;   
+int name_lightoffbycenter_timeset;
+int name_lightoffbycenter_status;
+int name_lightoffbycenter_loopcount;
+void name_lightoffbycenter(int T1color[], int H1color[], int E1color[], int O2color[], int N2color[], int E2color[], int M3color[], int A3color[], int N3color[], int B4color[], int I4color[], int G4color[], int B5color[], int A5color[], int N5color[], int D5color[], int T6color[],int H6color[],int E6color[], int O6color[], int R6color[], int Y6color[], unsigned long steptime){
+
+    if(name_lightoffbycenter_timeset == 0){
+    name_lightoffbycenter_timmer = millis();
+    name_lightoffbycenter_timeset = 1;
+    }
+  if(name_lightoffbycenter_status == 0){
+    
+      name_fixed1(T1color, H1color, E1color, O2color, N2color, E2color, M3color, A3color, N3color, B4color, I4color, G4color, B5color, A5color, N5color, D5color, T6color, H6color, E6color, O6color, R6color, Y6color);
+      
+    if(millis() > (name_lightoffbycenter_timmer + steptime)){
+      name_lightoffbycenter_status = 1;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 1){
+    
+            name_fixed1(H1color, E1color, O2color, N2color, E2color, M3color, A3color, N3color, B4color, I4color, noir, noir, G4color, B5color, A5color, N5color, D5color, T6color, H6color, E6color, O6color, R6color);
+
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 2;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+
+  if(name_lightoffbycenter_status == 2){
+    
+            name_fixed1(E1color, O2color, N2color, E2color, M3color, A3color, N3color, B4color, I4color, noir, noir, noir, noir, G4color, B5color, A5color, N5color, D5color, T6color, H6color, E6color, O6color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 3;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+   if(name_lightoffbycenter_status == 3){
+    
+            name_fixed1(O2color, N2color, E2color, M3color, A3color, N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color, N5color, D5color, T6color, H6color, E6color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 4;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 4){
+    
+            name_fixed1( N2color, E2color, M3color, A3color, N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color, N5color, D5color, T6color, H6color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 5;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 5){
+    
+            name_fixed1(E2color, M3color, A3color, N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color, N5color, D5color, T6color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 6;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 6){
+    
+            name_fixed1(M3color, A3color, N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color, N5color, D5color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 7;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 7){
+    
+            name_fixed1(A3color, N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color, N5color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 8;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 8){
+    
+            name_fixed1(N3color, B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color, A5color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 9;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 9){
+    
+            name_fixed1(B4color, I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color, B5color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 10;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 10){
+    
+            name_fixed1(I4color, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, G4color);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 11;
+      name_lightoffbycenter_timmer = millis();
+    }
+  }
+  if(name_lightoffbycenter_status == 11){
+    
+            name_fixed1(noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir);
+    
+    if(millis() > name_lightoffbycenter_timmer + steptime){
+      name_lightoffbycenter_status = 0;
+      name_lightoffbycenter_timmer = millis();
+      name_lightoffbycenter_loopcount++;
+    }
+  }
+}
 //fadesirenvariables
 int name_fadesiren_status;
 int name_fadesiren_timeset;
@@ -6529,14 +6650,14 @@ void name_automaticenchainement1(int T1color[], int H1color[], int E1color[], in
   }
   if(name_automaticenchainement1_status == 12){
       name_fixed1(noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir);
-     if(millis() > name_automaticenchainement1_timmer + 1000){
+     if(millis() > name_automaticenchainement1_timmer + 600){
       name_automaticenchainement1_status = 13;
       name_automaticenchainement1_timmer = millis();
     }
    }
 
    if(name_automaticenchainement1_status == 13){
-    name_chenillar3color( rose, ciel, jaune, 70);
+    name_chenillar3color( rose, ciel, jaune, 60);
      if(name_chenillar3color_loopcount >= 1){
       name_automaticenchainement1_status = 14;
       name_automaticenchainement1_timmer = millis();
@@ -6558,14 +6679,29 @@ void name_automaticenchainement1(int T1color[], int H1color[], int E1color[], in
       name_automaticenchainement1_timmer = millis();
     }
    }
-  if(name_automaticenchainement1_status == 16){
+
+   if(name_automaticenchainement1_status == 16){
+      name_lightoffbycenter(T1color, H1color, E1color, O2color, N2color, E2color, M3color, A3color, N3color, B4color, I4color, G4color, B5color, A5color, N5color, D5color, T6color, H6color, E6color, O6color, R6color, Y6color, 200);
+     if(name_lightoffbycenter_loopcount >= 1){
+      name_automaticenchainement1_status = 17;
+      name_automaticenchainement1_timmer = millis();
+      name_lightoffbycenter_loopcount = 0;
+    }
+   }
+  if(name_automaticenchainement1_status == 17){
       name_fixed1(noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir, noir);
-     if(millis() > name_automaticenchainement1_timmer + 1000){
+     if(millis() > name_automaticenchainement1_timmer + 800){
       name_automaticenchainement1_status = 0;
       name_automaticenchainement1_timmer = millis();
     }
    }
+
+   
 }
+
+
+
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////                                                                         fonctions modes                                                                                        ///////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -6786,6 +6922,9 @@ void mode2() {
 
 //billie jean
 void mode3() {
+  disco_colors3(rouge, vert, bleu, 5000, 2000, 1000);
+  bot_colors3(rouge, vert, bleu, 5000, 2000, 1000);
+  top_colors3(rouge, vert, bleu, 5000, 2000, 1000);
   name_chenillarcolor1(bleu, 100);
 
 }
