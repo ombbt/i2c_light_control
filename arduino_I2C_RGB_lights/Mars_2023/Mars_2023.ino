@@ -79,6 +79,8 @@ int darkrouge[3]={40, 0, 0};
 int darkvert[3]={0, 40, 0};
 int darkbleu[3]={0, 0, 40};
 int darkorange[3]={30, 5, 0};
+int darkjaune[3]={50, 40, 0};
+int darkviolet[3]={30, 0, 60};
 
 
 int verydarkrouge[3]={1, 0, 0};
@@ -110,13 +112,18 @@ bool lightonoff;
 int mode; //un mode par musique (fonction loop)
 int program; //corespond aux pads du controlleur midi (fonction loop)
 int efect; //efect lumineux pads du controlleur midi
+int kickactive; // recoit l'info du kick et symballe depuis le bus i2c
+int symactive; // egal a 0 ou 1
 int efecton;
 int efectfin; //=1 si un effect est activé
 int namestatus;
+int percustatus;
 int top_nothingtodo; // =1 si un effet a besoin d'un arrierre plan
 int bot_nothingtodo;
 int disco_nothingtodo;
 unsigned long eventtimmer;
+unsigned long percutimmer;
+unsigned long percutimespend;
 unsigned long timespend; //fonction loop: temp depuis le dernier message smbus reçu part le raspberry
 
 int name_speedup;
@@ -158,29 +165,56 @@ void programchange( int programnumber, unsigned long finaltime){
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////                                                        fonctions sorties pwm ( program et efect ) top                                            /////////////////
+///////                                                        fonctions top sorties pwm ( program et efect ) top                                            /////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void top_fadetofix(int startcolor, int endcolor, unsigned long initime, unsigned long finaltime) {
-  int i;
-  float advance;
-  advance = 1000*initime/finaltime;
-  if(advance < 1000){
-    i = startcolor*(1000 - (advance))/1000 + endcolor*(advance)/1000;
-    analogWrite(top_led_pin_R, i);
-    analogWrite(top_led_pin_G, 0);
-    analogWrite(top_led_pin_B, 0);
+
+unsigned long top_piezobackgroudstrombo_timmer;
+int top_piezobackgroudstrombo_timeset;
+int top_piezobackgroudstrombo_status;
+int top_piezobackgroudstrombo_loopcount;
+
+void top_piezobackgroudstrombo(int oncolor[], unsigned long ontime, unsigned long offtime, int count) {
+  if(A2_val > 66){
+    top_piezobackgroudstrombo_timmer = millis();
+    top_piezobackgroudstrombo_loopcount = 0;
+    }
+    if(top_piezobackgroudstrombo_loopcount < count){
+  if(top_piezobackgroudstrombo_status == 1){
+    top_nothingtodo = 0;
+    analogWrite(top_led_pin_R, oncolor[0]);
+    analogWrite(top_led_pin_G, oncolor[1]);
+    analogWrite(top_led_pin_B, oncolor[2]);
+    if(millis() > (ontime + top_piezobackgroudstrombo_timmer)){
+      top_piezobackgroudstrombo_status = 0;
+      top_piezobackgroudstrombo_timmer = millis();
+      top_piezobackgroudstrombo_loopcount++;
+    }
   }
-  if(advance >= 1000){
-    analogWrite(top_led_pin_R, endcolor);
-    analogWrite(top_led_pin_G, 0);
-    analogWrite(top_led_pin_B, 0);
+  if(top_piezobackgroudstrombo_status == 0){
+    top_nothingtodo = 1;
+    if(millis() > offtime + top_piezobackgroudstrombo_timmer){
+      top_piezobackgroudstrombo_status = 1;
+      top_piezobackgroudstrombo_timmer = millis();
+    }
   }
+  }
+  if(top_piezobackgroudstrombo_loopcount > count){
+    top_nothingtodo = 1;
+  }
+}
+
+
+void top_fixedcolor(int color[]){
+    analogWrite(top_led_pin_R, color[0]);
+    analogWrite(top_led_pin_G, color[1]);
+    analogWrite(top_led_pin_B, color[2]);
 }
 
 int top_fadetofix2_timeset;
 unsigned long top_fadetofix2_timmer1;
 unsigned long top_fadetofix2_timmer2;
+int top_fadetofix2_loopcount;
 
 
 void top_fadetofix2(int startcolor[], int endcolor[], unsigned long finaltime) {
@@ -201,16 +235,18 @@ void top_fadetofix2(int startcolor[], int endcolor[], unsigned long finaltime) {
     analogWrite(top_led_pin_R, r);
     analogWrite(top_led_pin_G, g);
     analogWrite(top_led_pin_B, b);
+    top_nothingtodo = 0;
   }
   if(advance >= 1000){
     analogWrite(top_led_pin_R, endcolor[0]);
     analogWrite(top_led_pin_G, endcolor[1]);
     analogWrite(top_led_pin_B, endcolor[2]);
+    top_fadetofix2_loopcount ++;
   }
 }
 
 
-unsigned long top_strombo_timmer;   //a tester aussi en variables globales
+unsigned long top_strombo_timmer;   
 int top_strombo_timeset;
 int top_strombo_status;
 
@@ -267,6 +303,7 @@ void top_backgroundstrombo(int oncolor[], unsigned long ontime, unsigned long of
     }
   }
 }
+
 
 unsigned long top_someflasch_timmer;   //a tester aussi en variables globales
 int top_someflasch_timeset;
@@ -662,7 +699,7 @@ void top_fade3colors(int color1[], int color2[], int color3[], unsigned long fin
     
 }
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////                                                        fonctions sorties analogWrite(bot_led_pin_B, oncolor[2]); ( program et efect ) bot                                            /////////////////
+///////                                                        fonctions bot sorties analogWrite(bot_led_pin_B, oncolor[2]); ( program et efect ) bot                                            /////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /*void bot_fadetofix(int startcolor, int endcolor, unsigned long initime, unsigned long finaltime) {
@@ -682,6 +719,47 @@ void top_fade3colors(int color1[], int color2[], int color3[], unsigned long fin
   }
 }
 */
+
+void bot_fixedcolor(int color[]){
+    analogWrite(bot_led_pin_R, color[0]);
+    analogWrite(bot_led_pin_G, color[1]);
+    analogWrite(bot_led_pin_B, color[2]);
+}
+
+unsigned long bot_piezobackgroudstrombo_timmer;
+int bot_piezobackgroudstrombo_timeset;
+int bot_piezobackgroudstrombo_status;
+int bot_piezobackgroudstrombo_loopcount;
+
+void bot_piezobackgroudstrombo(int oncolor[], unsigned long ontime, unsigned long offtime, int count) {
+  if(kickactive == 1 and bot_piezobackgroudstrombo_loopcount > 0){
+    bot_piezobackgroudstrombo_timmer = millis();
+    bot_piezobackgroudstrombo_loopcount = 0;
+    }
+    if(bot_piezobackgroudstrombo_loopcount < count){
+  if(bot_piezobackgroudstrombo_status == 1){
+    bot_nothingtodo = 0;
+    analogWrite(bot_led_pin_R, oncolor[0]);
+    analogWrite(bot_led_pin_G, oncolor[1]);
+    analogWrite(bot_led_pin_B, oncolor[2]);
+    if(millis() > (ontime + bot_piezobackgroudstrombo_timmer)){
+      bot_piezobackgroudstrombo_status = 0;
+      bot_piezobackgroudstrombo_timmer = millis();
+      bot_piezobackgroudstrombo_loopcount++;
+    }
+  }
+  if(bot_piezobackgroudstrombo_status == 0){
+    bot_nothingtodo = 1;
+    if(millis() > offtime + bot_piezobackgroudstrombo_timmer){
+      bot_piezobackgroudstrombo_status = 1;
+      bot_piezobackgroudstrombo_timmer = millis();
+    }
+  }
+  }
+  if(bot_piezobackgroudstrombo_loopcount > count){
+    bot_nothingtodo = 1;
+  }
+}
 int bot_fade2colors_timeset;
 unsigned long bot_fade2colors_timmer1;
 unsigned long bot_fade2colors_timmer2;
@@ -798,6 +876,7 @@ void bot_fadetofix2(int startcolor[], int endcolor[], unsigned long finaltime) {
     analogWrite(bot_led_pin_R, r);
     analogWrite(bot_led_pin_G, g);
     analogWrite(bot_led_pin_B, b);
+    bot_nothingtodo = 0;
   }
   if(advance >= 1000){
     analogWrite(bot_led_pin_R, endcolor[0]);
@@ -1168,9 +1247,14 @@ void bot_fadesiren(int startcolor[], int endcolor[], unsigned long finaltime) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////                                                        fonctions sorties pwm ( program et efect ) disco                                            /////////////////
+///////                                                        fonctions disco sorties pwm ( program et efect ) disco                                            /////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void disco_fixedcolor(int color[]){
+    analogWrite(disco_led_pin_R, color[0]);
+    analogWrite(disco_led_pin_G, color[1]);
+    analogWrite(disco_led_pin_B, color[2]);
+}
 
 int disco_fade2colors_timeset;
 unsigned long disco_fade2colors_timmer1;
@@ -1213,6 +1297,35 @@ void disco_fade2colors(int startcolor[], int endcolor[], unsigned long finaltime
     
 }
 
+unsigned long disco_strombo_timmer;   
+int disco_strombo_timeset;
+int disco_strombo_status;
+
+void disco_strombo(int oncolor[], int offcolor[], unsigned long ontime, unsigned long offtime) {
+  disco_nothingtodo = 0;  
+  if(disco_strombo_timeset == 0){
+    disco_strombo_timmer = millis();
+    disco_strombo_timeset = 1;
+    }
+  if(disco_strombo_status == 1){
+    analogWrite(disco_led_pin_R, oncolor[0]);
+    analogWrite(disco_led_pin_G, oncolor[1]);
+    analogWrite(disco_led_pin_B, oncolor[2]);
+    if(millis() > (ontime + disco_strombo_timmer)){
+      disco_strombo_status = 0;
+      disco_strombo_timmer = millis();
+    }
+  }
+  if(disco_strombo_status == 0){
+    analogWrite(disco_led_pin_R, offcolor[0]);
+    analogWrite(disco_led_pin_G, offcolor[1]);
+    analogWrite(disco_led_pin_B, offcolor[2]);
+    if(millis() > offtime + disco_strombo_timmer){
+      disco_strombo_status = 1;
+      disco_strombo_timmer = millis();
+    }
+  }
+}
 
 int disco_fade3colors_timeset;
 unsigned long disco_fade3colors_timmer1;
@@ -1308,6 +1421,7 @@ void disco_fadetofix2(int startcolor[], int endcolor[], unsigned long finaltime)
     analogWrite(disco_led_pin_R, r);
     analogWrite(disco_led_pin_G, g);
     analogWrite(disco_led_pin_B, b);
+    disco_nothingtodo = 0;
   }
   if(advance >= 1000){
     analogWrite(disco_led_pin_R, endcolor[0]);
@@ -1316,35 +1430,6 @@ void disco_fadetofix2(int startcolor[], int endcolor[], unsigned long finaltime)
   }
 }
 
-unsigned long disco_strombo_timmer;   //a tester aussi en variables globales
-int disco_strombo_timeset;
-int disco_strombo_status;
-
-void disco_strombo(int oncolor[], int offcolor[], unsigned long ontime, unsigned long offtime) {
-  disco_nothingtodo = 0;  
-  if(disco_strombo_timeset == 0){
-    disco_strombo_timmer = millis();
-    disco_strombo_timeset = 1;
-    }
-  if(disco_strombo_status == 1){
-    analogWrite(disco_led_pin_R, oncolor[0]);
-    analogWrite(disco_led_pin_G, oncolor[1]);
-    analogWrite(disco_led_pin_B, oncolor[2]);
-    if(millis() > (ontime + disco_strombo_timmer)){
-      disco_strombo_status = 0;
-      disco_strombo_timmer = millis();
-    }
-  }
-  if(disco_strombo_status == 0){
-    analogWrite(disco_led_pin_R, offcolor[0]);
-    analogWrite(disco_led_pin_G, offcolor[1]);
-    analogWrite(disco_led_pin_B, offcolor[2]);
-    if(millis() > offtime + disco_strombo_timmer){
-      disco_strombo_status = 1;
-      disco_strombo_timmer = millis();
-    }
-  }
-}
 
 unsigned long disco_backgroundstrombo_timmer;
 int disco_backgroundstrombo_timeset;
@@ -4087,7 +4172,6 @@ void name_MANblink(int M31color[], int A31color[], int N31color[], unsigned long
     if(name_MANblink_status == 0){
     
     name_MANfixedcolors(M31color, A31color, N31color);
-    //Serial.print(" status 0 ");     
     if(millis() > (name_MANblink_timmer + colortime)){
       name_MANblink_status = 1;
       name_MANblink_timmer = millis();
@@ -4103,10 +4187,7 @@ void name_MANblink(int M31color[], int A31color[], int N31color[], unsigned long
       name_MANblink_loopcount++;
     }
   }
-  //Serial.print(" M31color ");
-  //Serial.println(M31color[0]);
-  Serial.println("millis");
-  Serial.println(millis());
+  
 }
 
 unsigned long name_BIGblink_timmer;   
@@ -5413,8 +5494,7 @@ void name_enchainement1(int count1, int time2, int time3){
       name_enchainement1_timmer = millis();
     }
   }
-   Serial.print(" name_chenillarblanc_loopcount ");
-  Serial.println(name_chenillarblanc_loopcount);
+   
 }
 
 
@@ -7010,6 +7090,213 @@ void name_automaticenchainement1(int T1color[], int H1color[], int E1color[], in
 
    
 }
+
+/////////////////////////////////////////////////////
+//////////      fonctions percu               //////
+////////////////////////////////////////////////////
+
+
+void percu_on(){
+  digitalWrite(neon_sym, HIGH);
+  digitalWrite(neon_GC, HIGH);
+  digitalWrite(neon_TomB, HIGH);
+  digitalWrite(neon_TomA, HIGH);
+  digitalWrite(neon_CC, HIGH);
+}
+
+void percu_off(){
+  digitalWrite(neon_sym, LOW);
+  digitalWrite(neon_GC, LOW);
+  digitalWrite(neon_TomB, LOW);
+  digitalWrite(neon_TomA, LOW);
+  digitalWrite(neon_CC, LOW);
+}
+
+unsigned long percu_strombo_timmer;  
+int percu_strombo_timeset;
+int percu_strombo_status;
+void percu_strombo(unsigned long ontime, unsigned long offtime) {  
+  if(percu_strombo_timeset == 0){
+    percu_strombo_timmer = millis();
+    percu_strombo_timeset = 1;
+    }
+  if(percu_strombo_status == 1){
+    percu_on();    
+    if(millis() > (ontime + percu_strombo_timmer)){
+      percu_strombo_status = 0;
+      percu_strombo_timmer = millis();
+    }
+  }
+  if(percu_strombo_status == 0){
+     percu_off();    
+    if(millis() > offtime + percu_strombo_timmer){
+      percu_strombo_status = 1;
+      percu_strombo_timmer = millis();
+    }
+  }
+}
+
+void percu_piezo(){
+
+      if(A0_val > 66){
+       digitalWrite(neon_TomB, HIGH);
+      }
+      if(A0_val < 66){
+       digitalWrite(neon_TomB, LOW);
+
+      }
+      if(A1_val > 66){
+       digitalWrite(neon_TomA, HIGH);
+         }
+      if(A1_val < 66){
+       digitalWrite(neon_TomA, LOW);
+      }
+
+      if(A2_val > 66){
+       digitalWrite(neon_CC, HIGH);
+      }
+      if(A2_val < 66){
+       digitalWrite(neon_CC, LOW);
+      }
+      
+      if(kickactive == 1){
+       digitalWrite(neon_GC, HIGH);
+
+      }
+      if(kickactive == 0){
+       digitalWrite(neon_GC, LOW);
+
+      }
+
+      if(symactive == 1){
+          digitalWrite(neon_sym, HIGH);
+
+      }
+      if(symactive == 0){
+          digitalWrite(neon_sym, LOW);
+
+      }
+           
+}
+
+
+
+
+unsigned long percu_chenillar1_timmer;   
+int percu_chenillar1_timeset;
+int percu_chenillar1_status;
+int percu_chenillar1_loopcount;
+void percu_chenillar1(unsigned long steptime){
+  if(percu_chenillar1_timeset == 0){
+    percu_chenillar1_timmer = millis();
+    percu_chenillar1_timeset = 1;
+    }
+    if(percu_chenillar1_status == 0){
+    
+      digitalWrite(neon_GC, HIGH);
+      digitalWrite(neon_CC, LOW);    
+  
+  if(millis() > (percu_chenillar1_timmer + steptime)){
+      percu_chenillar1_status = 1;
+      percu_chenillar1_timmer = millis();
+    }
+  }
+  if(percu_chenillar1_status == 1){
+    
+    digitalWrite(neon_sym, HIGH);
+    digitalWrite(neon_GC, LOW);
+  if(millis() > percu_chenillar1_timmer + steptime){
+      percu_chenillar1_status = 2;
+      percu_chenillar1_timmer = millis();
+    }
+  }
+  if(percu_chenillar1_status == 2){
+    
+   digitalWrite(neon_sym, LOW);
+   digitalWrite(neon_TomA, HIGH);
+  if(millis() > percu_chenillar1_timmer + steptime){
+      percu_chenillar1_status = 3;
+      percu_chenillar1_timmer = millis();
+    }
+  }
+
+  if(percu_chenillar1_status == 3){
+    
+    digitalWrite(neon_TomB, HIGH);
+    digitalWrite(neon_TomA, LOW);
+  if(millis() > percu_chenillar1_timmer + steptime){
+      percu_chenillar1_status = 4;
+      percu_chenillar1_timmer = millis();
+      
+    }
+  }
+
+  if(percu_chenillar1_status == 4){
+    
+    digitalWrite(neon_TomB, LOW);
+    digitalWrite(neon_CC, HIGH);  
+      
+   if(millis() > percu_chenillar1_timmer + steptime){
+      percu_chenillar1_status = 0;
+      percu_chenillar1_timmer = millis();
+      percu_chenillar1_loopcount++;
+
+    }
+  }
+
+}
+
+
+///////////////////////////////////////////////////////
+///             fonctions enchainements             ///
+///////////////////////////////////////////////////////
+int billie_refrain_timmer1;
+int billie_refrain_timmer2;
+int billie_refrain_status;
+int billie_refrain_timeset;
+void billie_refrain(){
+  if(billie_refrain_timeset == 0){
+    billie_refrain_timmer1 = millis();
+    billie_refrain_timeset = 1;
+  }
+    billie_refrain_timmer2 = millis() - billie_refrain_timmer1;
+  if(billie_refrain_status < 5 ){
+    top_fadetofix2(jaune, noir, 100);
+    bot_fadetofix2(jaune, noir, 100); 
+    if( top_fadetofix2_loopcount == 1){
+      top_fadetofix2_loopcount = 0;
+      top_fadetofix2_timeset = 0;
+      bot_fadetofix2_timeset = 0;
+      billie_refrain_status ++;
+      billie_refrain_timeset = 0;
+    }
+  }
+  if(billie_refrain_status = 5){
+
+      bot_fixedcolor(bleu);
+      top_fixedcolor(violet);
+      if(billie_refrain_timmer2 > 800){
+        billie_refrain_status = 6;
+        billie_refrain_timeset = 0;
+      
+    }
+  }
+  if(billie_refrain_status = 6){
+
+     bot_fixedcolor(violet);
+     top_fixedcolor(jaune);
+     if(billie_refrain_timmer2 > 800){
+      billie_refrain_status = 0;
+      billie_refrain_timeset = 0;            
+    }
+  }
+  Serial.print(billie_refrain_timmer2);
+  Serial.println(billie_refrain_status);
+}
+
+
+
+
 /////////////////////////////////////////////////////
 //                fonctions init                  ///
 /////////////////////////////////////////////////////
@@ -7137,6 +7424,7 @@ name_automaticenchainement1_loopcount = 0;
 }
 void top_timmersinit(){
   top_fadetofix2_timeset = 0;
+  top_fadetofix2_loopcount = 0;
   top_strombo_timeset = 0;
   top_backgroundstrombo_timeset = 0;
   top_someflasch_timeset = 0;
@@ -7206,6 +7494,8 @@ void all_lightoff() {
     analogWrite(disco_led_pin_R, 0);
     analogWrite(disco_led_pin_G, 0);
     analogWrite(disco_led_pin_B, 0);
+
+    percu_off();
   
 }
 
@@ -7425,7 +7715,7 @@ void mode2() {
       break;
       
       case 4:
-
+    
       break;
       
       case 5:
@@ -7451,54 +7741,112 @@ void mode2() {
  *0x12 solo clean
  *0x13 solo satu
  *0x14 soft light mode
-*/
-
-
+ *effect: 144: strombo1, 145, multicolor, 146 boule disco 148 strombo2, 149 fadesiren //150 fils lumineux
+ *
+ *
+ */
+//                                              pads                                        //
+//////////////////////////////////////////////////////////////////////////////////////////////
+// 128  // 129 // 144 // 145 // 146 //        // 151
+/////////////////////////////////////////////////////////////////////////////////////////////:
+// 130  // 131 // 148 // 149 // 150 //        // 152 
+///////////////////////////////////////////////////////////////////////////////////////////// 
 //billie jean
 void mode3() {
-  
-  //disco_colors3(rouge, vert, bleu, 5000, 2000, 1000);
-  //bot_colors3(rouge, vert, bleu, 5000, 2000, 1000);
-  //top_colors3(rouge, vert, bleu, 5000, 2000, 1000);
-  //name_chenillarcolor1(bleu, 100);
+
 if(efecton == 1){
     switch(efect){  //de 144 a 160 (de 0x90 a 0x9F)
-      case 144:
-        timeonefect(10000);
-        top_strombo(blanc, noir, 15,600); //oncolor, offcolor, ontime, offtime
-        bot_strombo(blanc, noir, 15,800);
+      case 144: //stromb
+        timeonefect(5000);
+        programchange(129, 4500);
+        top_strombo(blanc, noir, 15,120); //oncolor, offcolor, ontime, offtime
+        bot_strombo(blanc, noir, 15,250);
+        name_strombo(noir, blanc, 1200, 30);
+        disco_fixedcolor(noir);
+        
         if(efectfin == 1){
-          Serial.print(" effect fin ");
           top_timmersinit();
           bot_timmersinit();
         }
         
       break;
       
-      case 145:
-        timeonefect(7000);
-        programchange(131, 6990); //programchange(programnumber, time) durée doit etre inferieure a celle du timeoneffect 
-        top_backgroundstrombo(blanc, 20, 700); //oncolor, ontime, offtime
-        bot_nothingtodo == 1;
-        //name_speedup = name_speedup + 20;
+      case 145: //multicolor
+        timeonefect(5000);
+        programchange(129, 6990); //programchange(programnumber, time) durée doit etre inferieure a celle du timeoneffect 
+        top_colors8(bleu, blanc, vert, rose, ciel, jaune, blanc, vert, 150, 150, 150, 150, 150, 150, 150, 150);
+        bot_colors8(ciel, rose, jaune, vert, bleu, vert, blanc, jaune, 150, 150, 150, 150, 150, 150, 150, 150);
+        bot_colors3(vert, rose, ciel, 500, 500, 500);
+        name_chenillartype3et3color(rose, ciel, vert, 100);
+        percustatus = 2;
 
       break;
       
-      case 146:
+      case 146: //boule disco
         timeonefect(7000);
-        programchange(131, 10000); //programchange(programnumber, time) durée doit etre inferieure a celle du timeoneffect 
-        top_strombo(blanc, noir, 10,1200);
+        programchange(131, 4000);
+        bot_fixedcolor(verydarkbleu);
+        top_fixedcolor(verydarkbleu);
+        disco_strombo(darkjaune, noir, 2000,600);
+        percustatus = 0;
       break;
       
-      case 147:
-        top_strombo(blanc, vert, 10,150);
+      
+      case 148: //strombo 2
+        top_piezobackgroudstrombo(blanc, 20, 70, 2);
+        bot_piezobackgroudstrombo(blanc, 20, 70, 2);
+        percustatus = 0;
+      break;
+      
+      case 149: //fadeeffect
+        timeonefect(7000);
+        programchange(131, 4000);
+        top_fade2colors(rouge, noir, 300, 0);
+        bot_fade2colors(noir, rouge, 300, 0);
+        disco_strombo(blanc, noir, 1000,600);
+        percustatus = 0; 
 
+        
+        
+        
+      case 150: //neon
+        timeonefect(7000);
+        programchange(131, 4000);
+        bot_fixedcolor(violet);
+        top_fixedcolor(violet);
+        percu_piezo();
+        name_fixedcolors(emeraude);
+        disco_strombo(vert, noir, 800,600);
+
+        
       break;
-      case 148:
-        efecton = 0;
+
+      case 151: //sirene
+        if(timespend < 40){
+          top_fadetofix2_timeset = 0;
+          bot_fadetofix2_timeset = 0;
+          disco_fadetofix2_timeset = 0;
+        }
+        timeonefect(3000);
+        top_fadetofix2(rouge, darkorange, 700);
+        bot_fadetofix2(rouge, darkorange, 700);
+        disco_nothingtodo = 1;
       break;
+
+      case 152: //dwew
+        if(timespend < 40){
+          top_fadetofix2_timeset = 0;
+          bot_fadetofix2_timeset = 0;
+          disco_fadetofix2_timeset = 0;
+        }
+        timeonefect(820);
+        top_fadetofix2(rose, darkviolet, 500);
+        bot_fadetofix2(rose, darkviolet, 500);
+        disco_fadetofix2(rose, darkviolet, 500);
+        percustatus = 0;
+      break;
+
       
-      case 149:
 
       break;
     }
@@ -7548,43 +7896,39 @@ if(efecton == 1){
         top_someflasch_activate = 0;
         top_someblack_activate = 0;
         top_somemulticolors_activate = 0;
-        namestatus = 0;
-
-         digitalWrite(neon_sym, HIGH);
-         digitalWrite(neon_GC, HIGH);
-         digitalWrite(neon_TomB, HIGH);
-         digitalWrite(neon_TomA, HIGH);
-         digitalWrite(neon_CC, HIGH);
+        namestatus = 1;
+        percustatus = 1;     
 
         break;
         
-      case 129:
-        top_fade2colors(bleu, rouge, 12000, 6000);
-        top_someflasch_activate = 0;
-        top_someblack_activate = 1;
+      case 129: //couplet
+        top_fade2colors(jaune, bleu, 12000, 6000);
+        top_someflasch_activate = 1;
+        top_someblack_activate = 0;
         top_somemulticolors_activate = 0;
-        namestatus = 1;
-
-        digitalWrite(neon_sym, LOW);
-         digitalWrite(neon_GC, LOW);
-         digitalWrite(neon_TomB, LOW);
-         digitalWrite(neon_TomA, LOW);
-         digitalWrite(neon_CC, LOW);
+        
+        namestatus = 0;
+        percustatus = 0;
 
       break;
 
-      case 130:
-        top_colors8(jaune, violet, rose, bleu, noir, violet, noir, vert, 1500, 5000, 3000, 150, 300, 150, 1000, 1000);
+      case 130: //pont
+        top_fade2colors(ciel, rose, 12000, 6000);
         top_someflasch_activate = 0;
         top_someblack_activate = 0;
         top_somemulticolors_activate =0;
-        namestatus = 2;
+        
+        namestatus = 1;
+        percustatus = 1;
         
       break;
 
-      case 131:
-        top_someflasch_activate = 0;
-        namestatus = 3;
+      case 131: //refrain
+        billie_refrain(); //top et bot
+        top_someflasch_activate = 1;
+        top_someblack_activate = 0;
+        top_somemulticolors_activate =1;
+        namestatus = 2;
        
 
       break;
@@ -7604,23 +7948,25 @@ if(efecton == 1){
         break;
         
       case 129:
-        bot_fade2colors(bleu, rouge, 12000, 6000);
-        bot_someflasch_activate = 0;
-        bot_someblack_activate = 1;
+        bot_fade2colors(bleu, jaune, 11000, 6000);
+        bot_someflasch_activate = 1;
+        bot_someblack_activate = 0;
         bot_somemulticolors_activate = 0;
 
       break;
 
       case 130:
-        bot_colors8(jaune, violet, rose, bleu, noir, violet, noir, vert, 1500, 5000, 3000, 150, 300, 150, 1000, 1000);
-        bot_someflasch_activate = 0;
+        bot_fade2colors(ciel, rose, 12000, 6000);
+        bot_someflasch_activate = 1;
         bot_someblack_activate = 0;
         bot_somemulticolors_activate =0;
         
       break;
 
       case 131:
-        bot_someflasch_activate = 0;
+        bot_someflasch_activate = 1;
+        bot_someblack_activate = 0;
+        bot_somemulticolors_activate =1;
        
 
       break;
@@ -7640,15 +7986,15 @@ if(efecton == 1){
         break;
         
       case 129:
-        disco_fadesiren(rouge, bleu, 2000);
-        disco_someflasch_activate = 1;
-        disco_someblack_activate = 1;
+        disco_colors3(jaune, noir, noir, 5000, 2000, 0);
+        disco_someflasch_activate = 0;
+        disco_someblack_activate = 0;
         disco_somemulticolors_activate = 0;
 
       break;
 
       case 130:
-        disco_colors8(jaune, violet, rose, bleu, noir, violet, noir, vert, 1500, 5000, 3000, 150, 300, 150, 1000, 1000);
+        disco_colors8(jaune, noir, blanc, noir, jaune, noir, blanc, noir, 5000, 2000, 5000, 2000, 5000, 2000, 5000, 2000);
         disco_someflasch_activate = 0;
         disco_someblack_activate = 0;
         disco_somemulticolors_activate =0;
@@ -7674,14 +8020,14 @@ if(efecton == 1){
         if(timespend < 80 and efecton == 0){
            name_fade1_init = 0;
         }
-        name_fade1(noir, darkbleu, 12000, offset_list1);
+        name_fade1(vert, darkbleu, 5000, offset_list1);
       break;
       
       case 2:
         if(timespend < 80 and efecton == 0){
-           name_fade1_init = 0;
+           name_fade3_init = 0;
         }
-        name_enchainement1(3, 2000, 2000);
+        name_fade3(noir, noir, darkbleu, 12000, offset_list1);      
       break;
       
       case 3:
@@ -7702,6 +8048,28 @@ if(efecton == 1){
       case 6:
 
       break;
+    }
+      switch(percustatus){  
+      case 0:
+        percu_off();
+      break;
+            
+      case 1:
+        percu_piezo();
+      break;
+      
+      case 2:
+        percu_chenillar1(50);
+      break;
+      
+      case 3:
+        
+      break;
+      
+      case 4:
+
+      break;
+      
     }
 
 if(timespend < 80 and efecton == 0){
@@ -7839,9 +8207,12 @@ void receiveEvent(int howMany) {
     //char c = Wire.read(); // receive byte as a character
     //digitalWrite(ledPin, c);
     x = Wire.read();
-    eventtimmer = millis();
-    //Serial.println(x);
-
+    if(x <160){
+      eventtimmer = millis();
+    }
+    if(x >= 160){
+      percutimmer = millis();
+    }
   }
 }
 /*0x00 light off
@@ -7871,7 +8242,12 @@ void receiveEvent(int howMany) {
 // 130  // 131 // 148 // 149 // 150 //        // 152 
 ///////////////////////////////////////////////////////////////////////////////////////////// 
 void loop() {
-  timespend = millis() - eventtimmer; 
+  if(x < 160){
+  timespend = millis() - eventtimmer;
+  } 
+  if(x >= 160){
+  percutimespend = millis() - percutimmer;
+  }
   if(x >= 2 and x <= 127)  //de 0 a 127, (de 0x00 a 0x7F) le message envoyé par le raspberry est un changement de mode
     {
      mode = x;
@@ -7886,13 +8262,34 @@ void loop() {
       efecton = 0;
      }
     }
+    
    if(144 <= x and x < 160)
     {
-     efect = x; //de 144 a 160 (de 0x90 a 0x9F) le message envoyé par le raspberry est un controle ctrl
+     efect = x; //de 144 a 159 (de 0x90 a 0x9F) le message envoyé par le raspberry est un controle ctrl
      if(timespend < 100){
       efecton = 1;
      }
     }
+    
+    if(160 == x ){
+      if(percutimespend < 40){
+       kickactive = 1; 
+      }
+      if(percutimespend >= 40){
+       kickactive = 0; 
+       }
+    }
+    
+    if(161 == x ){
+      if(percutimespend < 40){
+      symactive = 1; 
+    }
+    if(percutimespend >= 40){
+      symactive = 0; 
+    }
+    }
+
+    
     if( x == 0){
       lightonoff = false;
     }
@@ -7974,10 +8371,7 @@ void loop() {
       A1_val = map(analogRead(analogPin1), 0, 1023, 60, 127);
       A2_val = map(analogRead(analogPin2), 0, 1023, 60, 127);
       A3_val = map(analogRead(analogPin3), 0, 1023, 60, 127);
-      A4_val = map(analogRead(analogPin4), 0, 1023, 60, 127);
-      A5_val = map(analogRead(analogPin5), 0, 1023, 60, 127);
-      A6_val = map(analogRead(analogPin6), 0, 1023, 60, 127);
-
+      
 
       if(A0_val > 66){
         A0_max = A0_val;
@@ -8006,37 +8400,19 @@ void loop() {
       if(A3_val < 66){
         A3_max = 0;
       }
+    //    Serial.print(percutimespend);
+     //   Serial.println(kickactive);
 
-      if(A4_val > 66){
-        A4_max = A4_val;
-      }
-      if(A4_val < 66){
-        A4_max = 0;
-      }
-      
-      if(A5_val > 66){
-        A5_max = A5_val;
-      }
-      if(A5_val < 66){
-        A5_max = 0;
-      }
 
-      if(A6_val > 66){
-        A6_max = A6_val;
-      }
-      if(A6_val < 66){
-        A6_max = 0;
-      }
 
-      
-      
+ /*     
      if(bot_fade2colors_timeset == 0){
      Serial.print(" bot_fade2colors_timeset == 0 ");
      }
      if(top_fade2colors_timeset == 0){
      Serial.println(" bot_fade2colors_timeset == 0 ");
      }
- /* Serial.print(" name_MANblink_loopcount ");
+  Serial.print(" name_MANblink_loopcount ");
   Serial.print(name_MANblink_loopcount);
   Serial.print(" name_MANblink_timmer ");
   Serial.print(name_MANblink_timmer);
